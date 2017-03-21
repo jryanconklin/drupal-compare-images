@@ -1,0 +1,109 @@
+ <?php
+
+function get_ship_list() {
+    $shiplist = array();
+    // $query = new EntityFieldQuery();
+
+    $result = db_query("SELECT * FROM node WHERE type = 'expansion'")->fetchCol();
+    $remove_sets_array = array('X-Wing Core Set','X-Wing Force Awakens Core Set', 'Most Wanted', 'Rebel Aces', 'Imperial Aces', 'Imperial Veterans', 'Heroes of the Resistance');
+    foreach($result as $shipname)
+    {
+        $nodeid = node_load($shipname);
+        if(!in_array($nodeid->title, $remove_sets_array)) {
+          $title = $nodeid->title;
+          $image = field_get_items('node',$nodeid,'field_ship_image');
+          $image = $image[0]['filename'];
+          $shiplist[$image] = $title;
+        }
+    }
+    return $shiplist;
+}
+
+function compare_ships_menu() {
+    $items['compare_ships'] = array(
+        'title' => 'Compare Ships',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('compare_ships'),
+        'access callback' => TRUE,
+        'type' => MENU_NORMAL_ITEM,
+    );
+    $items['compare_ships_results'] = array(
+        'title' => 'Ships',
+        'page callback' => 'compare_ships_results',
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+    return $items;
+}
+
+function compare_ships($form, &$form_state) {
+    $form = array();
+    $form['#theme'] = 'compare_ships_form_theme';
+    $form['ship1'] = array(
+        '#title' => 'Ship 1',
+        '#type' => 'select',
+        '#options' => get_ship_list(),
+        '#ajax' => array(
+          'callback' => 'ajax_compare_ships_callback',
+          'wrapper' => 'storage_div',
+          'method' => 'html'
+      ),
+    );
+
+    $form['ship2'] = array(
+        '#title' => 'Ship 2',
+        '#type' => 'select',
+        '#options' => get_ship_list(),
+        '#ajax' => array(
+          'callback' => 'ajax_compare_ships_callback',
+          'wrapper' => 'storage_div',
+          'method' => 'html'
+      ),
+    );
+
+    $form['replace_image1'] = array(
+      '#prefix' => '<div id="storage_div">',
+      '#suffix' => '</div>',
+    );
+
+    // $form['add_ship'] = array(
+    //   '#type' => 'submit',
+    //   '#value' => 'Add Ship',
+    //   '#ajax' => array(
+    //     'callback' => 'ajax_add_ships_callback',
+    //     'wrapper' => 'add_ships_div',
+    //     'method' => 'append',
+    //   )
+    // );
+    // $form['add_ships'] = array(
+    //   '#prefix' => '<div id="add_ships_div">',
+    //   '#suffix' => '</div>',
+    // );
+
+    return $form;
+}
+
+function compare_ships_theme() {
+  return array(
+    'compare_ships_form_theme' => array(
+      'render element' => 'form',
+      'template' => 'compare-ships',
+    ),
+    'compare_ships_form_result_theme' => array(
+      'template' => 'compare-ships-result',
+      'variables' => array('ship1' => NULL, 'ship2' => NULL  )
+    ),
+  );
+}
+
+function ajax_compare_ships_callback($form, &$form_state) {
+
+  $ship1 = $form_state['values']['ship1'];
+  $ship2 = $form_state['values']['ship2'];
+
+  return theme('compare_ships_form_result_theme', array('ship1' => $ship1, 'ship2' => $ship2));
+}
+
+// function ajax_add_ships_callback($form, &$form_state) {
+//
+// }
